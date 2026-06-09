@@ -148,7 +148,7 @@ function App() {
         missionTitle: journeyEntry.missionTitle,
         completedAt: new Date().toISOString(),
         note: journeyEntry.note || '',
-        imageUrls: journeyEntry.imageUrls || [],
+        codeResult: journeyEntry.codeResult || null,
       };
 
       if (isFirebaseEnabled && uidRef.current) {

@@ -30,10 +30,15 @@ function handlePrint(user, journeyEntries, steps) {
             <p class="time">완료: ${formatDate(e.completedAt)}</p>
             ${e.note ? `<p class="note">📝 ${e.note}</p>` : ''}
             ${
-              e.imageUrls?.length > 0
-                ? `<div class="images">${e.imageUrls
-                    .map((url) => `<img src="${url}" alt="캡처" />`)
-                    .join('')}</div>`
+              e.codeResult
+                ? `<div class="code-block">
+                    <p class="code-label">📋 코드</p>
+                    <pre class="code">${e.codeResult.code}</pre>
+                    <p class="code-label">▶ 실행 결과</p>
+                    <pre class="output ${e.codeResult.error ? 'error' : ''}">${
+                    e.codeResult.error || e.codeResult.output || '(출력 없음)'
+                  }</pre>
+                   </div>`
                 : ''
             }
           </div>
@@ -41,12 +46,10 @@ function handlePrint(user, journeyEntries, steps) {
         )
         .join('');
 
-      const quizStatus = stepState?.quizPassed ? '✅ 퀴즈 통과' : '';
-
       return `
         <div class="step-block">
           <h2>${stepId}단계: ${stepInfo?.name || ''}</h2>
-          ${quizStatus ? `<p class="quiz-badge">${quizStatus}</p>` : ''}
+          ${stepState?.quizPassed ? '<p class="quiz-badge">✅ 퀴즈 통과</p>' : ''}
           ${entriesHtml || '<p class="empty">기록 없음</p>'}
         </div>
       `;
@@ -61,25 +64,31 @@ function handlePrint(user, journeyEntries, steps) {
       <meta charset="utf-8" />
       <title>ML 여정 보고서 - ${user?.name || '학생'}</title>
       <style>
-        body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; max-width: 800px; margin: 0 auto; color: #1f2937; }
-        h1 { font-size: 24px; border-bottom: 2px solid #3b82f6; padding-bottom: 12px; margin-bottom: 24px; }
-        .step-block { margin-bottom: 32px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; }
-        h2 { font-size: 18px; color: #1d4ed8; margin: 0 0 12px; }
-        .quiz-badge { font-size: 13px; color: #059669; margin-bottom: 12px; }
-        .entry { border-left: 3px solid #3b82f6; padding-left: 12px; margin: 12px 0; }
-        .mission-title { font-weight: bold; font-size: 14px; margin: 0 0 4px; }
-        .time { font-size: 12px; color: #6b7280; margin: 0 0 6px; }
-        .note { font-size: 13px; background: #fef3c7; padding: 8px; border-radius: 4px; margin: 6px 0; }
-        .images { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-        img { max-width: 180px; max-height: 180px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb; }
-        .empty { color: #9ca3af; font-size: 13px; }
-        @media print { body { padding: 15px; } button { display: none; } }
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 30px; max-width: 820px; margin: 0 auto; color: #1f2937; }
+        h1 { font-size: 22px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; margin-bottom: 20px; }
+        .step-block { margin-bottom: 30px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 18px; }
+        h2 { font-size: 16px; color: #1d4ed8; margin: 0 0 10px; }
+        .quiz-badge { font-size: 12px; color: #059669; margin-bottom: 10px; }
+        .entry { border-left: 3px solid #3b82f6; padding-left: 12px; margin: 10px 0; }
+        .mission-title { font-weight: bold; font-size: 13px; margin: 0 0 3px; }
+        .time { font-size: 11px; color: #6b7280; margin: 0 0 5px; }
+        .note { font-size: 12px; background: #fef3c7; padding: 6px 10px; border-radius: 4px; margin: 5px 0; }
+        .code-block { margin-top: 8px; }
+        .code-label { font-size: 11px; font-weight: bold; color: #4b5563; margin: 4px 0 2px; }
+        pre.code { background: #1e1e2e; color: #cdd6f4; padding: 8px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin: 0 0 4px; white-space: pre-wrap; }
+        pre.output { background: #0d1117; color: #39d353; padding: 8px; border-radius: 4px; font-size: 11px; overflow-x: auto; margin: 0; white-space: pre-wrap; }
+        pre.output.error { color: #ff6b6b; }
+        .empty { color: #9ca3af; font-size: 12px; }
+        @media print { button { display: none; } }
       </style>
     </head>
     <body>
       <h1>📔 ML 여정 보고서 — ${user?.name || '학생'} (${user?.studentId || ''})</h1>
       ${content || '<p>아직 기록된 여정이 없습니다.</p>'}
-      <br/><button onclick="window.print()" style="padding:10px 24px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px;">🖨️ 인쇄 / PDF 저장</button>
+      <br/>
+      <button onclick="window.print()" style="padding:10px 24px;background:#3b82f6;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">
+        🖨️ 인쇄 / PDF 저장
+      </button>
     </body>
     </html>
   `);
@@ -87,7 +96,7 @@ function handlePrint(user, journeyEntries, steps) {
 }
 
 export default function JourneyTab({ user, steps, journeyEntries = [] }) {
-  const [expandedImages, setExpandedImages] = useState(null);
+  const [expandedCode, setExpandedCode] = useState(null); // missionId or null
 
   const completedStepIds = [
     ...new Set(journeyEntries.map((e) => e.stepId)),
@@ -100,12 +109,11 @@ export default function JourneyTab({ user, steps, journeyEntries = [] }) {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">🌟 내 여정</h2>
           <p className="text-gray-600">미션을 완료하면 여정 기록이 쌓입니다.</p>
         </div>
-
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-8 text-center">
           <div className="text-5xl mb-4">📔</div>
           <p className="text-lg text-gray-700 font-medium mb-2">아직 기록이 없어요</p>
           <p className="text-sm text-gray-500">
-            미션을 완료하고 배운 점을 기록하면 여기에 타임라인이 만들어집니다.
+            미션을 완료하면 코드·실행 결과·배운 점이 타임라인으로 기록됩니다.
           </p>
         </div>
       </div>
@@ -145,11 +153,9 @@ export default function JourneyTab({ user, steps, journeyEntries = [] }) {
           >
             {/* 단계 헤더 */}
             <div className="bg-gradient-to-r from-blue-600 to-blue-500 px-5 py-3 flex items-center justify-between">
-              <div>
-                <span className="text-white font-bold text-base">
-                  📌 {stepId}단계: {stepInfo?.name}
-                </span>
-              </div>
+              <span className="text-white font-bold text-base">
+                📌 {stepId}단계: {stepInfo?.name}
+              </span>
               {stepState?.quizPassed && (
                 <span className="text-xs bg-white text-blue-600 font-bold px-2 py-1 rounded-full">
                   ✅ 퀴즈 통과
@@ -158,112 +164,72 @@ export default function JourneyTab({ user, steps, journeyEntries = [] }) {
             </div>
 
             <div className="p-4 space-y-4">
-              {stepEntries.map((entry) => (
-                <div
-                  key={entry.missionId}
-                  className="border-l-4 border-blue-400 pl-4 py-1"
-                >
-                  {/* 미션 제목 + 완료 시간 */}
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="font-semibold text-gray-800 text-sm">
-                      ✅ 미션 {entry.missionId}: {entry.missionTitle}
-                    </p>
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
-                      {formatDate(entry.completedAt)}
-                    </span>
-                  </div>
-
-                  {/* 학생 기록 */}
-                  {entry.note && (
-                    <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
-                      <p className="text-xs text-yellow-700 font-semibold mb-0.5">
-                        ✏️ 내 기록
+              {stepEntries.map((entry) => {
+                const isExpanded = expandedCode === `${stepId}_${entry.missionId}`;
+                return (
+                  <div
+                    key={entry.missionId}
+                    className="border-l-4 border-blue-400 pl-4 py-1"
+                  >
+                    {/* 미션 제목 + 완료 시간 */}
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-gray-800 text-sm">
+                        ✅ 미션 {entry.missionId}: {entry.missionTitle}
                       </p>
-                      <p className="text-sm text-gray-700">{entry.note}</p>
+                      <span className="text-xs text-gray-400 whitespace-nowrap">
+                        {formatDate(entry.completedAt)}
+                      </span>
                     </div>
-                  )}
 
-                  {/* 이미지 썸네일 */}
-                  {entry.imageUrls?.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs text-gray-500 font-semibold mb-1">
-                        🖼️ 캡처 이미지 ({entry.imageUrls.length}장)
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {entry.imageUrls.map((url, i) => (
-                          <img
-                            key={i}
-                            src={url}
-                            alt={`캡처 ${i + 1}`}
-                            onClick={() =>
-                              setExpandedImages({ urls: entry.imageUrls, index: i })
-                            }
-                            className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-80 transition"
-                          />
-                        ))}
+                    {/* 학생 기록 */}
+                    {entry.note && (
+                      <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                        <p className="text-xs text-yellow-700 font-semibold mb-0.5">
+                          ✏️ 내 기록
+                        </p>
+                        <p className="text-sm text-gray-700">{entry.note}</p>
                       </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                    )}
+
+                    {/* 코드 결과 */}
+                    {entry.codeResult && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() =>
+                            setExpandedCode(isExpanded ? null : `${stepId}_${entry.missionId}`)
+                          }
+                          className="text-xs text-blue-600 font-semibold hover:underline"
+                        >
+                          {isExpanded ? '▲ 코드 접기' : '▼ 코드 결과 보기'}
+                        </button>
+
+                        {isExpanded && (
+                          <div className="mt-2 rounded-lg overflow-hidden border border-gray-700 text-xs font-mono">
+                            <div className="bg-[#1e1e2e] text-[#cdd6f4] px-4 py-3 max-h-40 overflow-y-auto whitespace-pre">
+                              {entry.codeResult.code}
+                            </div>
+                            <div
+                              className="px-4 py-2 max-h-32 overflow-y-auto whitespace-pre"
+                              style={{
+                                backgroundColor: '#0d1117',
+                                color: entry.codeResult.error ? '#ff6b6b' : '#39d353',
+                              }}
+                            >
+                              {entry.codeResult.error ||
+                                entry.codeResult.output ||
+                                '(출력 없음)'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );
       })}
-
-      {/* 이미지 확대 뷰어 */}
-      {expandedImages && (
-        <div
-          className="absolute inset-0 bg-black bg-opacity-80 flex items-center justify-center z-40 cursor-pointer"
-          onClick={() => setExpandedImages(null)}
-        >
-          <div className="text-center" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={expandedImages.urls[expandedImages.index]}
-              alt="확대"
-              className="max-w-full max-h-96 rounded-lg shadow-2xl"
-            />
-            <div className="flex items-center justify-center gap-4 mt-3">
-              {expandedImages.urls.length > 1 && (
-                <>
-                  <button
-                    onClick={() =>
-                      setExpandedImages((prev) => ({
-                        ...prev,
-                        index:
-                          (prev.index - 1 + prev.urls.length) % prev.urls.length,
-                      }))
-                    }
-                    className="px-3 py-1 bg-white text-gray-800 rounded font-bold text-sm"
-                  >
-                    ◀ 이전
-                  </button>
-                  <span className="text-white text-sm">
-                    {expandedImages.index + 1} / {expandedImages.urls.length}
-                  </span>
-                  <button
-                    onClick={() =>
-                      setExpandedImages((prev) => ({
-                        ...prev,
-                        index: (prev.index + 1) % prev.urls.length,
-                      }))
-                    }
-                    className="px-3 py-1 bg-white text-gray-800 rounded font-bold text-sm"
-                  >
-                    다음 ▶
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setExpandedImages(null)}
-                className="px-3 py-1 bg-red-500 text-white rounded font-bold text-sm"
-              >
-                ✕ 닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

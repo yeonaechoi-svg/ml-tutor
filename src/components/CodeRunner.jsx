@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import usePyodide from '../hooks/usePyodide';
 
-export default function CodeRunner({ template }) {
+export default function CodeRunner({ template, onResultChange }) {
   const { status, runCode } = usePyodide();
   const [code, setCode] = useState(template || '');
   const [output, setOutput] = useState('');
@@ -20,6 +20,9 @@ export default function CodeRunner({ template }) {
       const result = await runCode(code, csvFile);
       setOutput(result.output);
       setError(result.error);
+      if (onResultChange) {
+        onResultChange({ code, output: result.output, error: result.error });
+      }
     } catch (err) {
       setError(err.message);
     } finally {
