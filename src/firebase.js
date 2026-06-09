@@ -1,14 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
 
 export const isFirebaseEnabled = !!(
   process.env.REACT_APP_FIREBASE_API_KEY &&
   process.env.REACT_APP_FIREBASE_PROJECT_ID
 );
 
-let auth, db, storage, googleProvider;
+let db;
 
 if (isFirebaseEnabled) {
   const app = initializeApp({
@@ -19,10 +17,7 @@ if (isFirebaseEnabled) {
     messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.REACT_APP_FIREBASE_APP_ID,
   });
-  auth = getAuth(app);
   db = getFirestore(app);
-  storage = getStorage(app);
-  googleProvider = new GoogleAuthProvider();
 }
 
-export { auth, db, storage, googleProvider };
+export { db };

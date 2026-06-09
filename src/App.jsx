@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import StartScreen from './components/StartScreen';
 import MainLayout from './components/MainLayout';
 import TeacherDashboard from './components/teacher/TeacherDashboard';
 import { stepsIndex } from './data/steps_index';
-import { isFirebaseEnabled, auth, googleProvider } from './firebase';
+import { isFirebaseEnabled } from './firebase';
 import {
   loadUserData,
   saveUserData,
@@ -20,105 +20,63 @@ const initialSteps = () =>
   }));
 
 function App() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(null);       // { name, studentId, classCode, isTeacher }
+  const [userKey, setUserKey] = useState(null); // Firestore 문서 ID: classCode_studentId
   const [steps, setSteps] = useState(initialSteps);
   const [currentStep, setCurrentStep] = useState(3);
   const [currentTab, setCurrentTab] = useState('learn');
   const [currentMission, setCurrentMission] = useState(1);
   const [chatHistory, setChatHistory] = useState([]);
   const [journeyEntries, setJourneyEntries] = useState([]);
-  const [authLoading, setAuthLoading] = useState(isFirebaseEnabled);
-  const [dataLoaded, setDataLoaded] = useState(!isFirebaseEnabled);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
-  const uidRef = useRef(null);
-
-  // Firebase 인증 상태 감지 및 데이터 복원
+  // 진행 상황 자동 저장
   useEffect(() => {
-    if (!isFirebaseEnabled) return;
-
-    let signInWithPopup, signOut, onAuthStateChanged;
-    Promise.all([
-      import('firebase/auth').then((m) => {
-        signInWithPopup = m.signInWithPopup;
-        signOut = m.signOut;
-        onAuthStateChanged = m.onAuthStateChanged;
-      }),
-    ]).then(() => {
-      const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-        uidRef.current = fbUser?.uid || null;
-
-        if (fbUser) {
-          try {
-            const data = await loadUserData(fbUser.uid);
-            if (data?.name) {
-              setUser({ name: data.name, studentId: data.studentId, isTeacher: false });
-              if (data.steps) setSteps(data.steps);
-              if (data.currentStep) setCurrentStep(data.currentStep);
-              if (data.currentTab) setCurrentTab(data.currentTab);
-              if (data.currentMission) setCurrentMission(data.currentMission);
-              if (data.chatHistory) setChatHistory(data.chatHistory);
-            }
-            const entries = await loadJourneyEntries(fbUser.uid);
-            setJourneyEntries(entries);
-          } catch (e) {
-            console.error('데이터 로드 실패:', e);
-          }
-        }
-
-        setDataLoaded(true);
-        setAuthLoading(false);
-      });
-      return () => unsubscribe();
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // 진행 상황 자동 저장 (Firebase 연동 시)
-  useEffect(() => {
-    if (!isFirebaseEnabled || !dataLoaded || !uidRef.current || !user?.name) return;
-    saveUserData(uidRef.current, {
+    if (!isFirebaseEnabled || !userKey || !dataLoaded) return;
+    saveUserData(userKey, {
       steps,
       currentStep,
       currentTab,
       currentMission,
     }).catch(console.error);
-  }, [steps, currentStep, currentTab, currentMission, dataLoaded, user]);
+  }, [steps, currentStep, currentTab, currentMission, userKey, dataLoaded]);
 
-  const handleGoogleLogin = async (name, studentId) => {
-    if (!isFirebaseEnabled) {
-      setUser({ name, studentId, isTeacher: false });
-      return;
+  const handleStartStudent = async (name, studentId, classCode) => {
+    const key = `${classCode}_${studentId}`;
+
+    if (isFirebaseEnabled) {
+      try {
+        const existing = await loadUserData(key);
+        if (existing?.name) {
+          // 재접속: 저장된 진행 상황 복원
+          setUser({ name: existing.name, studentId, classCode, isTeacher: false });
+          if (existing.steps) setSteps(existing.steps);
+          if (existing.currentStep) setCurrentStep(existing.currentStep);
+          if (existing.currentTab) setCurrentTab(existing.currentTab);
+          if (existing.currentMission) setCurrentMission(existing.currentMission);
+          if (existing.chatHistory) setChatHistory(existing.chatHistory);
+        } else {
+          // 첫 접속: 프로필 저장
+          setUser({ name, studentId, classCode, isTeacher: false });
+          await saveUserData(key, { name, studentId, classCode });
+        }
+        const entries = await loadJourneyEntries(key);
+        setJourneyEntries(entries);
+      } catch (e) {
+        console.error('데이터 로드 실패:', e);
+        setUser({ name, studentId, classCode, isTeacher: false });
+      }
+    } else {
+      setUser({ name, studentId, classCode, isTeacher: false });
     }
-    const { signInWithPopup: popup } = await import('firebase/auth');
-    const result = await popup(auth, googleProvider);
-    const fbUser = result.user;
-    uidRef.current = fbUser.uid;
 
-    const existing = await loadUserData(fbUser.uid);
-    const profile = existing?.name
-      ? { name: existing.name, studentId: existing.studentId }
-      : {
-          name: name || fbUser.displayName || '학생',
-          studentId: studentId || '',
-        };
-
-    await saveUserData(fbUser.uid, { ...profile, email: fbUser.email });
-    setUser({ ...profile, isTeacher: false });
-
-    if (existing?.steps) setSteps(existing.steps);
-    if (existing?.currentStep) setCurrentStep(existing.currentStep);
-    if (existing?.currentMission) setCurrentMission(existing.currentMission);
-
-    const entries = await loadJourneyEntries(fbUser.uid);
-    setJourneyEntries(entries);
+    setUserKey(key);
     setDataLoaded(true);
-  };
-
-  const handleStartStudent = (name, studentId) => {
-    setUser({ name, studentId, isTeacher: false });
   };
 
   const handleStartTeacher = () => {
     setUser({ isTeacher: true });
+    setDataLoaded(true);
   };
 
   const handleQuizPass = () => {
@@ -151,9 +109,9 @@ function App() {
         codeResult: journeyEntry.codeResult || null,
       };
 
-      if (isFirebaseEnabled && uidRef.current) {
+      if (isFirebaseEnabled && userKey) {
         try {
-          await saveJourneyEntry(uidRef.current, entry);
+          await saveJourneyEntry(userKey, entry);
         } catch (e) {
           console.error('여정 저장 실패:', e);
         }
@@ -171,47 +129,30 @@ function App() {
   const handleAddChat = (role, message) => {
     setChatHistory((prev) => {
       const next = [...prev, { role, message }];
-      if (isFirebaseEnabled && uidRef.current) {
-        saveUserData(uidRef.current, { chatHistory: next }).catch(console.error);
+      if (isFirebaseEnabled && userKey) {
+        saveUserData(userKey, { chatHistory: next }).catch(console.error);
       }
       return next;
     });
   };
 
-  const handleLogout = async () => {
-    if (isFirebaseEnabled && uidRef.current) {
-      const { signOut } = await import('firebase/auth');
-      await signOut(auth);
-    }
-    uidRef.current = null;
+  const handleLogout = () => {
     setUser(null);
+    setUserKey(null);
     setSteps(initialSteps());
     setCurrentStep(3);
     setCurrentTab('learn');
     setCurrentMission(1);
     setChatHistory([]);
     setJourneyEntries([]);
-    setDataLoaded(!isFirebaseEnabled);
+    setDataLoaded(false);
   };
-
-  if (authLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="text-5xl mb-4">🤖</div>
-          <p className="text-gray-600 text-lg">ML 튜터 로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (!user) {
     return (
       <StartScreen
         onStartStudent={handleStartStudent}
         onStartTeacher={handleStartTeacher}
-        onGoogleLogin={handleGoogleLogin}
-        isFirebaseEnabled={isFirebaseEnabled}
       />
     );
   }
@@ -229,7 +170,7 @@ function App() {
       currentMission={currentMission}
       chatHistory={chatHistory}
       journeyEntries={journeyEntries}
-      uid={uidRef.current}
+      uid={userKey}
       onTabChange={setCurrentTab}
       onStepChange={setCurrentStep}
       onQuizPass={handleQuizPass}
