@@ -4,6 +4,7 @@
   "description": "AI 튜터 기반 기계학습 학습 플랫폼",
   "private": true,
   "dependencies": {
+    "firebase": "^10.12.0",
     "http-proxy-middleware": "^2.0.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

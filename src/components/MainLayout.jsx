@@ -10,6 +10,8 @@ export default function MainLayout({
   currentTab,
   currentMission,
   chatHistory,
+  journeyEntries,
+  uid,
   onTabChange,
   onStepChange,
   onQuizPass,
@@ -34,10 +36,14 @@ export default function MainLayout({
       {/* 중앙 가이드 패널 (flex-grow) */}
       <div className="flex-grow border-r border-gray-300 bg-white overflow-y-auto">
         <GuidePanel
+          user={user}
+          steps={steps}
           currentStep={currentStep}
           currentTab={currentTab}
           currentMission={currentMission}
           isQuizPassed={isQuizPassed}
+          journeyEntries={journeyEntries}
+          uid={uid}
           onTabChange={onTabChange}
           onQuizPass={onQuizPass}
           onMissionComplete={onMissionComplete}

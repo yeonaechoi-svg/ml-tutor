@@ -5,10 +5,14 @@ import MissionTab from './tabs/MissionTab';
 import JourneyTab from './tabs/JourneyTab';
 
 export default function GuidePanel({
+  user,
+  steps,
   currentStep,
   currentTab,
   currentMission,
   isQuizPassed,
+  journeyEntries,
+  uid,
   onTabChange,
   onQuizPass,
   onMissionComplete,
@@ -46,9 +50,7 @@ export default function GuidePanel({
 
       {/* 탭 내용 */}
       <div className="flex-1 overflow-y-auto p-6">
-        {currentTab === 'learn' && (
-          <LearnTab currentStep={currentStep} />
-        )}
+        {currentTab === 'learn' && <LearnTab currentStep={currentStep} />}
         {currentTab === 'quiz' && (
           <QuizTab currentStep={currentStep} onPass={onQuizPass} />
         )}
@@ -56,11 +58,16 @@ export default function GuidePanel({
           <MissionTab
             currentStep={currentStep}
             currentMission={currentMission}
+            uid={uid}
             onMissionComplete={onMissionComplete}
           />
         )}
         {currentTab === 'journey' && (
-          <JourneyTab currentStep={currentStep} />
+          <JourneyTab
+            user={user}
+            steps={steps}
+            journeyEntries={journeyEntries}
+          />
         )}
       </div>
     </div>

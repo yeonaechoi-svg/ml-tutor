@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { step3Content } from '../../data/step3_content';
 import CodeRunner from '../CodeRunner';
+import MissionCompleteModal from '../MissionCompleteModal';
 
 export default function MissionTab({
   currentStep,
   currentMission,
+  uid,
   onMissionComplete,
 }) {
   const [selectedMission, setSelectedMission] = useState(currentMission);
   const [completedMissions, setCompletedMissions] = useState({});
+  const [pendingMission, setPendingMission] = useState(null); // 완료 모달 대기 중인 미션
 
   const getContent = (stepId) => {
     if (stepId === 3) return step3Content;
@@ -16,18 +19,59 @@ export default function MissionTab({
   };
 
   const content = getContent(currentStep);
-  if (!content) return <div className="text-center text-gray-500">콘텐츠를 불러올 수 없습니다.</div>;
+  if (!content)
+    return (
+      <div className="text-center text-gray-500">콘텐츠를 불러올 수 없습니다.</div>
+    );
 
   const activeMission = content.missions.find((m) => m.id === selectedMission);
 
-  const handleCompleteMission = (missionId) => {
-    setCompletedMissions({ ...completedMissions, [missionId]: true });
-    onMissionComplete(missionId);
-    // 다음 미션 자동 선택
-    if (missionId < content.missions.length) {
-      setSelectedMission(missionId + 1);
-    }
+  const handleClickComplete = (missionId) => {
+    setPendingMission(missionId);
   };
+
+  const handleModalSave = ({ note, imageUrls }) => {
+    const mission = content.missions.find((m) => m.id === pendingMission);
+    setCompletedMissions((prev) => ({ ...prev, [pendingMission]: true }));
+    onMissionComplete(pendingMission, {
+      missionTitle: mission?.title || '',
+      note,
+      imageUrls,
+    });
+    if (pendingMission < content.missions.length) {
+      setSelectedMission(pendingMission + 1);
+    }
+    setPendingMission(null);
+  };
+
+  const handleModalSkip = () => {
+    const mission = content.missions.find((m) => m.id === pendingMission);
+    setCompletedMissions((prev) => ({ ...prev, [pendingMission]: true }));
+    onMissionComplete(pendingMission, {
+      missionTitle: mission?.title || '',
+      note: '',
+      imageUrls: [],
+    });
+    if (pendingMission < content.missions.length) {
+      setSelectedMission(pendingMission + 1);
+    }
+    setPendingMission(null);
+  };
+
+  // 미션 완료 모달 표시 중
+  if (pendingMission !== null) {
+    const mission = content.missions.find((m) => m.id === pendingMission);
+    return (
+      <MissionCompleteModal
+        uid={uid}
+        stepId={currentStep}
+        missionId={pendingMission}
+        missionTitle={mission?.title || ''}
+        onSave={handleModalSave}
+        onSkip={handleModalSkip}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full gap-0" style={{ minHeight: '600px' }}>
@@ -65,7 +109,11 @@ export default function MissionTab({
                   <span>{isCompleted ? '✅' : isUnlocked ? '🔵' : '🔒'}</span>
                   <div>
                     <p className="font-semibold">미션 {mission.id}</p>
-                    <p className={`text-xs mt-0.5 ${isSelected ? 'text-blue-100' : 'text-gray-500'}`}>
+                    <p
+                      className={`text-xs mt-0.5 ${
+                        isSelected ? 'text-blue-100' : 'text-gray-500'
+                      }`}
+                    >
                       {mission.title}
                     </p>
                   </div>
@@ -112,7 +160,7 @@ export default function MissionTab({
 
             {/* 완료 버튼 */}
             <button
-              onClick={() => handleCompleteMission(activeMission.id)}
+              onClick={() => handleClickComplete(activeMission.id)}
               disabled={completedMissions[activeMission.id]}
               className={`w-full py-2.5 font-bold rounded-lg transition ${
                 completedMissions[activeMission.id]
