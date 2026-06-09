@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="ML 튜터 - 기계학습 학습 서비스" />
+    <title>ML 튜터</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Pyodide: 브라우저 파이썬 실행 환경 -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.25.1/full/pyodide.js"></script>
+    <style>
+      :root {
+        --color-primary: #3b82f6;
+        --color-primary-dark: #1e40af;
+        --color-success: #10b981;
+        --color-success-dark: #059669;
+        --color-warning: #f59e0b;
+        --color-warning-dark: #d97706;
+        --color-danger: #ef4444;
+        --color-danger-dark: #dc2626;
+        --color-bg: #ffffff;
+        --color-bg-secondary: #f3f4f6;
+        --color-text: #1f2937;
+        --color-text-secondary: #6b7280;
+        --color-border: #e5e7eb;
+      }
+
+      [data-theme="dark"] {
+        --color-primary: #60a5fa;
+        --color-primary-dark: #3b82f6;
+        --color-success: #34d399;
+        --color-success-dark: #10b981;
+        --color-warning: #fbbf24;
+        --color-warning-dark: #f59e0b;
+        --color-danger: #f87171;
+        --color-danger-dark: #ef4444;
+        --color-bg: #1f2937;
+        --color-bg-secondary: #111827;
+        --color-text: #f3f4f6;
+        --color-text-secondary: #d1d5db;
+        --color-border: #374151;
+      }
+
+      body {
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>이 앱을 실행하려면 JavaScript를 활성화해야 합니다.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
